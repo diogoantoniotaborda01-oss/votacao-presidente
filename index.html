@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071a43">
+  <title>Escolha seu candidato</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{color-scheme:dark;--bg:#06132f;--panel:#0b2451;--line:rgba(164,200,255,.18);--muted:#a9bee6;--blue:#4fa5ff;--cyan:#79e2ff;--white:#f5f8ff}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--white);background:radial-gradient(ellipse at 50% -5%,#1b5db0 0,transparent 43%),radial-gradient(ellipse at 100% 100%,#102d68 0,transparent 45%),var(--bg);display:flex;align-items:center;justify-content:center;padding:28px 16px}
+    .wrap{width:min(920px,100%)}
+    .top{text-align:center;margin-bottom:26px}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(121,226,255,.25);background:rgba(30,111,197,.18);color:#bdeeff;padding:8px 13px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.16em}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+    h1{margin:18px 0 9px;font-size:clamp(32px,6vw,54px);letter-spacing:-.045em;line-height:1.05}
+    .subtitle{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+    .panel{background:linear-gradient(150deg,rgba(18,49,99,.92),rgba(7,24,57,.95));border:1px solid var(--line);border-radius:26px;padding:clamp(17px,4vw,30px);box-shadow:0 25px 80px rgba(0,0,0,.27);backdrop-filter:blur(14px)}
+    .auth{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px;background:rgba(2,13,34,.46);border:1px solid var(--line);border-radius:16px;margin-bottom:20px}
+    .authcopy{flex:1;min-width:180px}.authcopy strong{display:block;font-size:14px}.authcopy span{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+    input[type=email]{min-width:180px;flex:1;background:#071a3a;border:1px solid rgba(165,200,255,.25);color:var(--white);border-radius:11px;padding:12px 13px;font:inherit;font-size:14px;outline:none}
+    input[type=email]:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,165,255,.12)}
+    button{font:inherit;cursor:pointer;border:0;transition:transform .15s,filter .15s,opacity .15s}
+    button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+    .loginbtn{padding:12px 15px;border-radius:11px;font-size:13px;font-weight:800;color:#06132f;background:linear-gradient(100deg,#86e6ff,#66adff);white-space:nowrap}
+    .loginbtn:hover,.vote:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+    .logout{padding:9px 12px;border-radius:10px;color:#d9e8ff;background:rgba(126,169,231,.12);border:1px solid var(--line);font-size:12px}
+    .candidates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+    .candidate{position:relative;overflow:hidden;border:1px solid rgba(154,194,255,.22);border-radius:21px;padding:22px;background:linear-gradient(145deg,rgba(23,62,120,.8),rgba(6,25,59,.94));min-width:0}
+    .candidate:before{content:"";position:absolute;width:180px;height:180px;border-radius:50%;right:-88px;top:-100px;background:rgba(63,156,255,.12);filter:blur(2px)}
+    .candidate-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:relative}
+    .avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#70d8ff,#3483f5);box-shadow:0 8px 25px rgba(48,130,247,.25);font-size:17px;font-weight:900;color:#062052;letter-spacing:-.04em}
+    .candidate:nth-child(2) .avatar{background:linear-gradient(145deg,#d5e7ff,#8b9cff)}
+    .number{display:inline-flex;align-items:center;justify-content:center;min-width:57px;height:42px;border-radius:13px;background:rgba(76,158,255,.12);border:1px solid rgba(106,181,255,.3);color:#c5e9ff;font-size:20px;font-weight:900;letter-spacing:.03em}
+    .candidate h2{font-size:clamp(17px,3vw,22px);margin:19px 0 5px;letter-spacing:-.025em;position:relative;overflow-wrap:anywhere}
+    .candidate .small{color:var(--muted);font-size:12px;margin:0 0 20px;position:relative}
+    .vote{width:100%;padding:13px 14px;border-radius:12px;background:linear-gradient(100deg,#7de3ff,#5f9fff);color:#06132f;font-size:14px;font-weight:900;position:relative}
+    .vote:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.55)}
+    .results{margin-top:22px;padding:20px;border:1px solid var(--line);border-radius:18px;background:rgba(3,15,38,.35)}
+    .resulttop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:17px}
+    .resulttop h3{margin:0;font-size:15px}.live{font-size:10px;letter-spacing:.12em;color:#9ae9ff;font-weight:900}
+    .resultrow{margin-top:14px}.resultlabel{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin-bottom:8px}.resultlabel span:last-child{font-weight:800;color:#dcecff;font-variant-numeric:tabular-nums}
+    .track{height:9px;border-radius:99px;background:rgba(134,172,228,.15);overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,#3f8fff,#83e5ff);border-radius:99px;transition:width .4s ease}.resultrow:nth-of-type(3) .bar{background:linear-gradient(90deg,#758cff,#c0ccff)}
+    .status{margin:14px 1px 0;min-height:20px;color:#b8d8ff;font-size:12px;line-height:1.6}
+    .foot{text-align:center;color:#7f9bc9;font-size:11px;line-height:1.65;margin:18px 8px 0}
+    .hidden{display:none!important}
+    @media(max-width:600px){body{padding:22px 12px}.candidates{grid-template-columns:1fr}.candidate{padding:19px}.auth{align-items:stretch}.authcopy{flex-basis:100%}.auth input,.auth button{width:100%}.panel{border-radius:21px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="eyebrow"><span class="dot"></span> VOTAÇÃO ONLINE</div>
+      <h1>Escolha seu candidato</h1>
+      <p class="subtitle">Confira as opções e registre seu voto.</p>
+    </header>
+    <section class="panel">
+      <div class="auth" id="authBox">
+        <div class="authcopy"><strong id="authTitle">Entre para votar</strong><span id="authHelp">Digite seu e-mail e enviaremos um link de acesso. Cada conta pode registrar um voto.</span></div>
+        <input id="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" aria-label="Seu e-mail">
+        <button id="loginBtn" class="loginbtn">Receber link</button>
+        <button id="logoutBtn" class="logout hidden">Sair</button>
+      </div>
+      <div class="candidates">
+        <article class="candidate">
+          <div class="candidate-head"><div class="avatar">DT</div><div class="number">67</div></div>
+          <h2>Diogo Taborda</h2><p class="small">Candidato número 67</p>
+          <button class="vote" data-candidate="Diogo Taborda" disabled>Votar em Diogo</button>
+        </article>
+        <article class="candidate">
+          <div class="candidate-head"><div class="avatar">VL</div><div class="number">28</div></div>
+          <h2>Vinícius Lima</h2><p class="small">Candidato número 28</p>
+          <button class="vote" data-candidate="Vinícius Lima" disabled>Votar em Vinícius</button>
+        </article>
+      </div>
+      <section class="results" aria-live="polite">
+        <div class="resulttop"><h3>Resultado da votação</h3><span class="live">● AO VIVO</span></div>
+        <div class="resultrow">
+          <div class="resultlabel"><span>Diogo Taborda · 67</span><span id="diogoCount">0 votos · 0%</span></div>
+          <div class="track"><div class="bar" id="diogoBar"></div></div>
+        </div>
+        <div class="resultrow">
+          <div class="resultlabel"><span>Vinícius Lima · 28</span><span id="viniciusCount">0 votos · 0%</span></div>
+          <div class="track"><div class="bar" id="viniciusBar"></div></div>
+        </div>
+      </section>
+      <p class="status" id="status" role="status">A página está pronta para conectar ao sistema de votação.</p>
+    </section>
+    <p class="foot">Votação informal. Não representa uma votação oficial.<br>Para votar, é necessário confirmar acesso ao e-mail.</p>
+  </main>
+<script>
+  // Vamos preencher estes dois campos nas próximas etapas. Use somente a chave pública (anon/publishable), nunca a service_role.
+  const SUPABASE_URL = "COLE_A_URL_DO_SUPABASE_AQUI";
+  const SUPABASE_ANON_KEY = "COLE_A_CHAVE_PUBLICA_DO_SUPABASE_AQUI";
+  const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("COLE_") && !SUPABASE_ANON_KEY.includes("COLE_");
+  const statusEl = document.getElementById('status');
+  const emailEl = document.getElementById('email');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const authTitle = document.getElementById('authTitle');
+  const authHelp = document.getElementById('authHelp');
+  const voteButtons = [...document.querySelectorAll('.vote')];
+  let supabaseClient = null;
+  let currentUser = null;
+  let currentVote = null;
+  let busy = false;
+
+  function setStatus(message){ statusEl.textContent = message; }
+  function updateCounts(rows){
+    const counts = {'Diogo Taborda':0,'Vinícius Lima':0};
+    (rows || []).forEach(row => { if (Object.hasOwn(counts,row.candidate)) counts[row.candidate] = Number(row.total || 0); });
+    const total = counts['Diogo Taborda'] + counts['Vinícius Lima'];
+    const dPct = total ? Math.round(counts['Diogo Taborda'] * 100 / total) : 0;
+    const vPct = total ? 100 - dPct : 0;
+    document.getElementById('diogoCount').textContent = `${counts['Diogo Taborda']} ${counts['Diogo Taborda'] === 1 ? 'voto' : 'votos'} · ${dPct}%`;
+    document.getElementById('viniciusCount').textContent = `${counts['Vinícius Lima']} ${counts['Vinícius Lima'] === 1 ? 'voto' : 'votos'} · ${vPct}%`;
+    document.getElementById('diogoBar').style.width = dPct + '%';
+    document.getElementById('viniciusBar').style.width = vPct + '%';
+  }
+  function refreshButtons(){
+    voteButtons.forEach(btn => { btn.disabled = !configured || !currentUser || Boolean(currentVote) || busy; });
+    loginBtn.disabled = !configured || busy || Boolean(currentUser);
+    emailEl.disabled = !configured || busy || Boolean(currentUser);
+    logoutBtn.classList.toggle('hidden', !currentUser);
+    emailEl.classList.toggle('hidden', Boolean(currentUser));
+    loginBtn.classList.toggle('hidden', Boolean(currentUser));
+    if(currentUser){
+      authTitle.textContent = 'Você entrou';
+      authHelp.textContent = currentVote ? `Seu voto já foi registrado: ${currentVote}.` : 'Escolha um candidato abaixo para registrar seu voto.';
+    } else {
+      authTitle.textContent = 'Entre para votar';
+      authHelp.textContent = 'Digite seu e-mail e enviaremos um link de acesso. Cada conta pode registrar um voto.';
+    }
+  }
+  async function refreshResults(){
+    if(!supabaseClient) return;
+    const {data,error} = await supabaseClient.rpc('vote_counts');
+    if(error){ setStatus('Não foi possível carregar os resultados. Confira a configuração do banco e as permissões.'); return; }
+    updateCounts(data);
+  }
+  async function loadOwnVote(){
+    currentVote = null;
+    if(currentUser){
+      const {data,error} = await supabaseClient.from('votes').select('candidate').eq('user_id',currentUser.id).maybeSingle();
+      if(!error && data) currentVote = data.candidate;
+    }
+    refreshButtons();
+  }
+  async function init(){
+    if(!configured || !window.supabase){
+      setStatus('A página foi criada. Falta conectar o banco de votos nas próximas etapas.');
+      refreshButtons();
+      return;
+    }
+    supabaseClient = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+    const {data:{session}} = await supabaseClient.auth.getSession();
+    currentUser = session?.user || null;
+    await loadOwnVote();
+    await refreshResults();
+    if(!currentUser) setStatus('Digite seu e-mail e clique em “Receber link”. Abra o e-mail e clique no link para confirmar antes de votar.');
+    else setStatus(currentVote ? 'Seu voto já está registrado. Obrigado por participar!' : 'Acesso confirmado. Agora escolha uma opção para registrar seu voto.');
+    supabaseClient.auth.onAuthStateChange((_event,session) => {
+      setTimeout(async () => { currentUser = session?.user || null; await loadOwnVote(); await refreshResults(); },0);
+    });
+  }
+  loginBtn.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if(!configured){ setStatus('Ainda falta conectar o banco de votos. Vamos configurar isso nas próximas etapas.'); return; }
+    if(!email || !emailEl.checkValidity()){ setStatus('Digite um endereço de e-mail válido.'); emailEl.focus(); return; }
+    busy = true; refreshButtons(); setStatus('Enviando o link de acesso…');
+    const {error} = await supabaseClient.auth.signInWithOtp({email, options:{emailRedirectTo:window.location.origin + window.location.pathname}});
+    busy = false; refreshButtons();
+    if(error) setStatus('Não foi possível enviar o e-mail. Confira o endereço e a configuração de autenticação.');
+    else setStatus('Link enviado! Abra seu e-mail e clique no link para confirmar o acesso. Depois volte a esta página.');
+  });
+  logoutBtn.addEventListener('click', async () => { if(!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; currentVote = null; refreshButtons(); setStatus('Você saiu da sua conta.'); });
+  voteButtons.forEach(btn => btn.addEventListener('click', async () => {
+    if(!supabaseClient || !currentUser || currentVote || busy) return;
+    const candidate = btn.dataset.candidate;
+    const ok = window.confirm(`Confirmar seu voto em ${candidate}? Não será possível votar novamente com esta conta.`);
+    if(!ok) return;
+    busy = true; refreshButtons(); setStatus('Registrando seu voto…');
+    const {error} = await supabaseClient.from('votes').insert({user_id:currentUser.id,candidate});
+    busy = false;
+    if(error){
+      await loadOwnVote(); await refreshResults();
+      setStatus(error.code === '23505' ? 'Esta conta já registrou um voto. Cada conta pode votar apenas uma vez.' : 'Não foi possível registrar o voto. Tente novamente; seu voto não foi confirmado.');
+      return;
+    }
+    currentVote = candidate; refreshButtons(); await refreshResults();
+    setStatus('Voto registrado! Esta conta não poderá votar novamente.');
+  }));
+  init();
+</script>
+</body>
+</html>
